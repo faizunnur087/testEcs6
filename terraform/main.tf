@@ -182,7 +182,9 @@ resource "aws_ecs_task_definition" "app" {
 
       environment = [
         { name = "PORT", value = tostring(var.app_port) },
-        { name = "APP_ENV", value = "production" }      ]
+        { name = "APP_ENV", value = "production" },
+        { name = "DATABASE_URL", value = "" }
+      ]
 
       logConfiguration = {
         logDriver = "awslogs"
@@ -204,8 +206,6 @@ resource "aws_ecs_service" "app" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
-  health_check_grace_period_seconds = 180
-
   network_configuration {
     subnets          = data.aws_subnets.default.ids
     security_groups  = [aws_security_group.ecs_tasks.id]
@@ -218,14 +218,9 @@ resource "aws_ecs_service" "app" {
     container_port   = var.app_port
   }
 
-  depends_on = [aws_lb_listener.http, aws_iam_role_policy_attachment.ecs_task_execution]
+  depends_on = [aws_lb_listener.http]
 }
 
-# ── Outputs ────────────────────────────────────────────────────────────────────
 output "alb_dns_name" {
   value = aws_lb.main.dns_name
-}
-
-output "alb_url" {
-  value = "http://${aws_lb.main.dns_name}"
 }
