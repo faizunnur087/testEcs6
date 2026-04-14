@@ -186,8 +186,7 @@ resource "aws_ecs_task_definition" "app" {
 
       environment = [
         { name = "PORT", value = tostring(var.app_port) },
-        { name = "APP_ENV", value = "production" },
-        { name = "DATABASE_URL", value = "" }
+        { name = "APP_ENV", value = "production" }
       ]
 
       logConfiguration = {
@@ -200,4 +199,32 @@ resource "aws_ecs_task_definition" "app" {
       }
     }
   ])
+}
+
+# ── ECS Service ────────────────────────────────────────────────────────────────
+resource "aws_ecs_service" "app" {
+  name            = "${var.project_name}-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.app.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = data.aws_subnets.default.ids
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.app.arn
+    container_name   = var.project_name
+    container_port   = var.app_port
+  }
+
+  depends_on = [aws_lb_listener.http]
+}
+
+# ── Outputs ────────────────────────────────────────────────────────────────────
+output "alb_dns_name" {
+  value = aws_lb.main.dns_name
 }
